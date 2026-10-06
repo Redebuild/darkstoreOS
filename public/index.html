@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DarkStore OS — Ops Cockpit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- Header Navigation -->
+  <header class="border-b border-slate-800 bg-slate-900/60 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-amber-500/20 text-white font-extrabold text-xl">
+          <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg text-white">DarkStore<span class="text-amber-400">OS</span></span>
+            <span id="navCompanyBadge" class="text-[10px] font-semibold text-indigo-400 bg-indigo-950 border border-indigo-800/60 px-2 py-0.5 rounded-full">Secure Multi-Tenant</span>
+          </div>
+          <p class="text-xs text-slate-400">Hyperlocal Q-Commerce Stockout Sentinel</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div id="userProfile" class="hidden sm:flex items-center gap-2 text-xs text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="userEmailDisplay" class="font-medium">Not Logged In</span>
+        </div>
+        <button id="authBtn" onclick="handleAuthAction()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition">
+          <i data-lucide="log-in" class="w-3.5 h-3.5 text-indigo-400"></i> Login
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: Analytics, Stockout Sentinel & Dispute Ledger -->
+    <div class="lg:col-span-9 space-y-6">
+
+      <!-- KPI Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl backdrop-blur-sm">
+          <p class="text-xs text-slate-400 uppercase font-medium">Critical Delisting Threats</p>
+          <h3 id="statCritical" class="text-3xl font-extrabold text-rose-500 mt-1">0</h3>
+          <p class="text-[11px] text-slate-500 mt-1">Runway &le; Hub Inward SLA</p>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl backdrop-blur-sm">
+          <p class="text-xs text-slate-400 uppercase font-medium">Tracked SKU Positions</p>
+          <h3 id="statTotalSkus" class="text-3xl font-extrabold text-white mt-1">0</h3>
+          <p class="text-[11px] text-slate-500 mt-1">Active inventory rows</p>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl backdrop-blur-sm">
+          <p class="text-xs text-slate-400 uppercase font-medium">Disputed Debit Claims</p>
+          <h3 id="statDisputes" class="text-3xl font-extrabold text-amber-400 mt-1">₹0.00</h3>
+          <p id="statDisputeCount" class="text-[11px] text-slate-500 mt-1">0 claims pending</p>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl backdrop-blur-sm">
+          <p class="text-xs text-slate-400 uppercase font-medium">Platform Linkage</p>
+          <h3 id="statSyncStatus" class="text-3xl font-extrabold text-emerald-400 mt-1">SYNCED</h3>
+          <p class="text-[11px] text-slate-500 mt-1">Automated Catalog Bridge</p>
+        </div>
+      </div>
+
+      <!-- Inventory Matrix Table -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-sm">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+          <div>
+            <h4 class="font-bold text-sm text-white">Hyperlocal Inventory Sentinel</h4>
+            <p class="text-xs text-slate-400">Live burn-rate monitoring and algorithmic delisting alerts</p>
+          </div>
+          <button onclick="refreshDashboard()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold">↻ Refresh</button>
+        </div>
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                <th class="p-3">SKU Details</th>
+                <th class="p-3">Platform & Dark Store</th>
+                <th class="p-3">Current Stock</th>
+                <th class="p-3">Burn Rate</th>
+                <th class="p-3">Runway (Hours)</th>
+                <th class="p-3">Status Sentinel</th>
+                <th class="p-3 text-right">Dispatch</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTable" class="divide-y divide-slate-800/80">
+              <tr>
+                <td colspan="7" class="p-6 text-center text-slate-500">Sign in to view your inventory. Click "Link Blinkit / Zepto ID" to auto-sync.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Inwarding Discrepancy & Claims Ledger -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm">
+        <h4 class="font-bold text-sm text-white mb-1 flex items-center gap-2">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i> Field Inwarding & Discrepancy Ledger
+        </h4>
+        <p class="text-xs text-slate-400 mb-4">Debit claims automatically calculated from warehouse arrival short-receipts</p>
+        <div id="disputeLedger" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="text-slate-500 text-xs py-5 col-span-3 text-center border border-dashed border-slate-800 rounded-xl">No disputes recorded for your account.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Operations Side Panel -->
+    <aside class="lg:col-span-3 space-y-4">
+      <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 sticky top-24 backdrop-blur-sm space-y-4">
+        
+        <div class="border-b border-slate-800 pb-3">
+          <h3 class="font-extrabold text-sm text-white flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i> Operations Control
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Automated channels & manual overrides</p>
+        </div>
+
+        <!-- Dedicated Inbound Email Card -->
+        <div class="bg-slate-950/80 border border-slate-800 p-3 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="mail" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Sync Inbound Email
+            </span>
+            <span class="text-[10px] bg-indigo-950 text-indigo-400 border border-indigo-800 px-1.5 py-0.5 rounded font-mono">WEBHOOK</span>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-tight">
+            Forward daily Blinkit/Zepto inventory & GRN reports here for zero-touch reconciliation.
+          </p>
+          <div class="flex items-center gap-1.5">
+            <input id="inboundEmailBox" readonly class="w-full bg-slate-900 border border-slate-700 px-2 py-1 text-[11px] rounded font-mono text-amber-300 select-all" value="Login to view email" />
+            <button type="button" onclick="copyInboundEmail()" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[11px] transition">
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <!-- 1-Click Platform Integration (Zero Effort) -->
+        <button onclick="toggleModal('modalConnectPlatform')" class="w-full bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white text-xs font-bold py-3 px-3 rounded-xl flex items-center justify-between shadow-lg shadow-indigo-600/20 transition">
+          <span class="flex items-center gap-2">
+            <i data-lucide="link" class="w-4 h-4"></i> Link Blinkit / Zepto ID
+          </span>
+          <span class="bg-black/30 text-[10px] px-2 py-0.5 rounded text-amber-200 uppercase font-mono">Auto Sync</span>
+        </button>
+
+        <!-- Action Trigger Buttons -->
+        <div class="space-y-2">
+          <button onclick="toggleModal('modalStore')" class="w-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold py-2.5 px-3 rounded-xl flex items-center justify-between transition">
+            <span class="flex items-center gap-2">
+              <i data-lucide="map-pin" class="w-4 h-4 text-amber-400"></i> Register Dark Store
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+          </button>
+
+          <button onclick="toggleModal('modalSku')" class="w-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold py-2.5 px-3 rounded-xl flex items-center justify-between transition">
+            <span class="flex items-center gap-2">
+              <i data-lucide="package" class="w-4 h-4 text-indigo-400"></i> Add SKU Product
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+          </button>
+
+          <button onclick="toggleModal('modalInventory')" class="w-full bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-300 hover:text-white text-xs font-semibold py-2.5 px-3 rounded-xl flex items-center justify-between transition">
+            <span class="flex items-center gap-2">
+              <i data-lucide="activity" class="w-4 h-4 text-indigo-400"></i> Map Stock / Burn Rate
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+          </button>
+
+          <button onclick="toggleModal('modalInward')" class="w-full bg-amber-600/20 hover:bg-amber-600 border border-amber-500/40 text-amber-300 hover:text-white text-xs font-semibold py-2.5 px-3 rounded-xl flex items-center justify-between transition">
+            <span class="flex items-center gap-2">
+              <i data-lucide="file-check" class="w-4 h-4 text-amber-400"></i> Log Inwarding (GRN)
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+          </button>
+        </div>
+
+        <!-- Bulk Inwarding / CSV Upload Section -->
+        <div class="border-t border-slate-800 pt-3">
+          <label class="block text-xs font-bold text-slate-300 mb-1 flex items-center gap-1.5">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i> Bulk Stock Inwarding
+          </label>
+          <p class="text-[11px] text-slate-500 mb-2">Upload vendor CSV (sku_code, store_id, stock, burn_rate)</p>
+          <label class="w-full bg-slate-950 border border-dashed border-slate-700 hover:border-indigo-500 text-slate-300 text-xs py-2.5 px-3 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1 text-center transition">
+            <i data-lucide="upload-cloud" class="w-5 h-5 text-indigo-400"></i>
+            <span class="font-medium text-[11px]">Click to upload .CSV</span>
+            <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleCSVUpload(this)" />
+          </label>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- AUTH POPUP MODAL (LOGIN / SIGNUP) -->
+  <div id="modalAuth" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+      <div class="text-center mb-5">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center mx-auto mb-3 text-white font-bold text-xl shadow-lg shadow-indigo-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <h3 id="authTitle" class="text-lg font-bold text-white">Sign In to DarkStore OS</h3>
+        <p id="authSubtitle" class="text-xs text-slate-400 mt-1">Manage your brand's quick commerce runway</p>
+      </div>
+
+      <div id="authError" class="hidden bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs p-2.5 rounded-lg mb-3"></div>
+
+      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3 text-xs">
+        <div id="companyField" class="hidden">
+          <label class="text-slate-400 block mb-1">Company / Brand Name</label>
+          <input id="authCompany" placeholder="e.g. Blue Tokai / Sleepy Owl" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Work Email</label>
+          <input id="authEmail" type="email" placeholder="ops@yourbrand.com" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Password</label>
+          <input id="authPassword" type="password" placeholder="••••••••" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-lg text-white text-xs mt-2 transition">
+          Sign In
+        </button>
+      </form>
+
+      <div class="text-center mt-4 pt-4 border-t border-slate-800 text-xs text-slate-400">
+        <span id="authToggleText">Don't have an account?</span>
+        <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-indigo-400 hover:text-indigo-300 font-bold ml-1">Sign Up</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ONE-CLICK PLATFORM CONNECTION -->
+  <div id="modalConnectPlatform" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-md shadow-2xl">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> Connect Seller Account
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">We will auto-sync your dark stores, stock, and burn rates.</p>
+        </div>
+        <button onclick="toggleModal('modalConnectPlatform')" class="text-slate-400 hover:text-white text-xs">✕</button>
+      </div>
+
+      <form onsubmit="handleConnectPlatform(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="text-slate-400 block mb-1">Select Channel</label>
+          <select id="connPlatform" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white">
+            <option value="Blinkit">Blinkit (Seller Hub)</option>
+            <option value="Zepto">Zepto (Partner Portal)</option>
+            <option value="Instamart">Swiggy Instamart (Brand Hub)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1">Seller / Merchant ID</label>
+          <input id="connSellerId" placeholder="e.g. BLNK_DEL_88492" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+          <p class="text-[10px] text-slate-500 mt-1">Found in your platform's Seller Profile / Warehouse settings.</p>
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1">API Access Token / Secret (Optional)</label>
+          <input id="connApiKey" type="password" placeholder="••••••••••••••••" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+
+        <div class="bg-indigo-950/40 border border-indigo-800/60 p-3 rounded-xl text-[11px] text-indigo-300">
+          ✨ <strong>Zero Manual Work:</strong> All dark store pincodes, shelf inventory, and burn rates will populate instantly.
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal('modalConnectPlatform')" class="px-3.5 py-1.5 bg-slate-800 rounded-lg text-slate-300">Cancel</button>
+          <button type="submit" id="connSubmitBtn" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-lg text-white">
+            Connect & Sync
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD DARK STORE -->
+  <div id="modalStore" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm">
+      <h3 class="text-sm font-bold mb-3 text-white">Register Dark Store</h3>
+      <form onsubmit="handleCreateStore(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-400">Platform</label>
+          <select id="storePlatform" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white">
+            <option value="Blinkit">Blinkit</option>
+            <option value="Zepto">Zepto</option>
+            <option value="Instamart">Instamart</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-slate-400">Cluster Name</label>
+          <input id="storeCluster" placeholder="DLF Phase 3" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Pincode</label>
+          <input id="storePincode" placeholder="122002" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Inwarding SLA Lead Time (Hours)</label>
+          <input id="storeLeadTime" type="number" step="0.5" value="3.0" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal('modalStore')" class="px-3.5 py-1.5 bg-slate-800 rounded-lg text-slate-300">Cancel</button>
+          <button type="submit" class="px-3.5 py-1.5 bg-indigo-600 font-semibold rounded-lg text-white">Save Store</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD SKU -->
+  <div id="modalSku" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm">
+      <h3 class="text-sm font-bold mb-3 text-white">Add SKU Product</h3>
+      <form onsubmit="handleCreateSku(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-400">SKU Code</label>
+          <input id="skuCode" placeholder="CB-250-NITRO" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Product Name</label>
+          <input id="skuName" placeholder="Nitro Cold Brew 250ml" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Category</label>
+          <input id="skuCategory" placeholder="Beverages" value="Beverages" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Unit Retail Price (₹)</label>
+          <input id="skuPrice" type="number" step="0.01" placeholder="120.00" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal('modalSku')" class="px-3.5 py-1.5 bg-slate-800 rounded-lg text-slate-300">Cancel</button>
+          <button type="submit" class="px-3.5 py-1.5 bg-indigo-600 font-semibold rounded-lg text-white">Save SKU</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIGURE INVENTORY & BURN -->
+  <div id="modalInventory" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm">
+      <h3 class="text-sm font-bold mb-3 text-white">Configure Store Inventory & Burn</h3>
+      <form onsubmit="handleSetInventory(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-400">Dark Store</label>
+          <select id="invStoreSelect" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white"></select>
+        </div>
+        <div>
+          <label class="text-slate-400">SKU Product</label>
+          <select id="invSkuSelect" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white"></select>
+        </div>
+        <div>
+          <label class="text-slate-400">Current Stock (Units)</label>
+          <input id="invStock" type="number" value="10" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Burn Velocity (Units / Hour)</label>
+          <input id="invBurn" type="number" step="0.1" value="2.5" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal('modalInventory')" class="px-3.5 py-1.5 bg-slate-800 rounded-lg text-slate-300">Cancel</button>
+          <button type="submit" class="px-3.5 py-1.5 bg-indigo-600 font-semibold rounded-lg text-white">Commit Inventory</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LOG INWARDING (GRN) -->
+  <div id="modalInward" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-xs">
+      <h3 class="text-sm font-bold text-white mb-3">Log Dark Store Inwarding (GRN)</h3>
+      <form onsubmit="handleInwarding(event)" class="space-y-3">
+        <div>
+          <label class="text-slate-400">PO Number</label>
+          <input id="inwPO" placeholder="PO-9921" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Target Dark Store</label>
+          <select id="inwStoreSelect" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white"></select>
+        </div>
+        <div>
+          <label class="text-slate-400">SKU Item</label>
+          <select id="inwSkuSelect" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-400">Dispatched Qty</label>
+            <input id="inwDispatched" type="number" value="100" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+          </div>
+          <div>
+            <label class="text-slate-400">Received (GRN) Qty</label>
+            <input id="inwReceived" type="number" value="85" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-400">Rejection Reason (if short)</label>
+          <select id="inwReason" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white">
+            <option value="None">None (100% Inwarded)</option>
+            <option value="Torn outer barcode / Scan failed">Torn outer barcode / Scan failed</option>
+            <option value="Shelf life below 60% requirement">Shelf life below 60% requirement</option>
+            <option value="Damaged in transit / Seal leakage">Damaged in transit / Seal leakage</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal('modalInward')" class="px-3.5 py-1.5 bg-slate-800 rounded-lg text-slate-300">Cancel</button>
+          <button type="submit" class="px-3.5 py-1.5 bg-amber-600 font-semibold rounded-lg text-white">Reconcile Inwarding</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DISPATCH STN -->
+  <div id="modalSTN" class="fixed inset-0 bg-black/75 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm text-xs">
+      <h3 class="text-sm font-bold mb-3 text-white">Dispatch Stock Transfer Note (STN)</h3>
+      <form onsubmit="handleCreateSTN(event)" class="space-y-3">
+        <input type="hidden" id="stnStoreId" />
+        <input type="hidden" id="stnSkuId" />
+        <div>
+          <label class="text-slate-400">Destination Store</label>
+          <input id="stnDestination" readonly class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-slate-400 font-bold" />
+        </div>
+        <div>
+          <label class="text-slate-400">Source Warehouse Hub</label>
+          <input id="stnSource" value="Central Mother Depot - Rewari/Manesar" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Transfer Units</label>
+          <input id="stnUnits" type="number" value="50" required class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400">Courier Mode</label>
+          <select id="stnCourier" class="w-full bg-slate-950 border border-slate-700 p-2.5 rounded-lg text-white">
+            <option value="Urgent 2-Hour Runner">Urgent 2-Hour Runner</option>
+            <option value="Next Inwarding Truck">Next Inwarding Truck</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal('modalSTN')" class="px-3.5 py-1.5 bg-slate-800 rounded-lg text-slate-300">Cancel</button>
+          <button type="submit" class="px-3.5 py-1.5 bg-emerald-600 font-semibold rounded-lg text-white">Generate STN</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let isSignUp = false;
+    let currentUser = null;
+
+    function toggleModal(id) {
+      const modal = document.getElementById(id);
+      modal.classList.toggle('hidden');
+      modal.classList.toggle('flex');
+    }
+
+    function toggleAuthMode() {
+      isSignUp = !isSignUp;
+      document.getElementById('companyField').classList.toggle('hidden', !isSignUp);
+      document.getElementById('authTitle').innerText = isSignUp ? 'Create Brand Account' : 'Sign In to DarkStore OS';
+      document.getElementById('authSubtitle').innerText = isSignUp ? 'Isolate your dark store stockouts & disputes' : 'Manage your quick commerce operations';
+      document.getElementById('authSubmitBtn').innerText = isSignUp ? 'Create Account' : 'Sign In';
+      document.getElementById('authToggleText').innerText = isSignUp ? 'Already registered?' : "Don't have an account?";
+      document.getElementById('authToggleBtn').innerText = isSignUp ? 'Sign In' : 'Sign Up';
+      document.getElementById('authError').classList.add('hidden');
+    }
+
+    function copyInboundEmail() {
+      const emailInput = document.getElementById('inboundEmailBox');
+      navigator.clipboard.writeText(emailInput.value);
+      alert('Inbound sync email copied to clipboard!');
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          currentUser = data.user;
+          document.getElementById('userEmailDisplay').innerText = currentUser.email;
+          document.getElementById('navCompanyBadge').innerText = currentUser.company;
+          document.getElementById('authBtn').innerHTML = `<i data-lucide="log-out" class="w-3.5 h-3.5 text-rose-400"></i> Logout`;
+          
+          // Auto-assign dedicated inbound inbox to UI
+          document.getElementById('inboundEmailBox').value = `inward-${currentUser.userId}@inbound.darkstoreos.com`;
+
+          document.getElementById('modalAuth').classList.add('hidden');
+          document.getElementById('modalAuth').classList.remove('flex');
+          await loadMetadata();
+          await refreshDashboard();
+        } else {
+          showAuthModal();
+        }
+      } catch (err) {
+        showAuthModal();
+      }
+      lucide.createIcons();
+    }
+
+    function showAuthModal() {
+      document.getElementById('modalAuth').classList.remove('hidden');
+      document.getElementById('modalAuth').classList.add('flex');
+      document.getElementById('authBtn').innerHTML = `<i data-lucide="log-in" class="w-3.5 h-3.5 text-indigo-400"></i> Login`;
+    }
+
+    async function handleAuthAction() {
+      if (currentUser) {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        currentUser = null;
+        window.location.reload();
+      } else {
+        showAuthModal();
+      }
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      const company_name = document.getElementById('authCompany').value;
+      const errBox = document.getElementById('authError');
+
+      const endpoint = isSignUp ? '/api/auth/register' : '/api/auth/login';
+      const payload = isSignUp ? { email, password, company_name } : { email, password };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errBox.innerText = data.error || 'Authentication failed';
+          errBox.classList.remove('hidden');
+          return;
+        }
+        await checkAuth();
+      } catch (err) {
+        errBox.innerText = 'Network error. Please try again.';
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    async function handleConnectPlatform(e) {
+      e.preventDefault();
+      const btn = document.getElementById('connSubmitBtn');
+      btn.innerText = 'Syncing Platform Catalog...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/integrations/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform: document.getElementById('connPlatform').value,
+            seller_id: document.getElementById('connSellerId').value,
+            api_key: document.getElementById('connApiKey').value
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        alert(data.message);
+        toggleModal('modalConnectPlatform');
+        await loadMetadata();
+        await refreshDashboard();
+      } catch (err) {
+        alert(err.message || 'Sync failed');
+      } finally {
+        btn.innerText = 'Connect & Sync';
+        btn.disabled = false;
+      }
+    }
+
+    async function loadMetadata() {
+      const res = await fetch('/api/metadata');
+      if (!res.ok) return;
+      const data = await res.json();
+      
+      const storeOptions = data.stores.map(s => `<option value="${s.id}">[${s.platform}] ${s.cluster_name} (${s.pincode})</option>`).join('');
+      const skuOptions = data.skus.map(s => `<option value="${s.id}">${s.name} (${s.sku_code})</option>`).join('');
+
+      document.getElementById('invStoreSelect').innerHTML = storeOptions;
+      document.getElementById('invSkuSelect').innerHTML = skuOptions;
+      document.getElementById('inwStoreSelect').innerHTML = storeOptions;
+      document.getElementById('inwSkuSelect').innerHTML = skuOptions;
+    }
+
+    async function refreshDashboard() {
+      const res = await fetch('/api/dashboard');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById('statTotalSkus').innerText = data.summary.total_skus;
+      document.getElementById('statCritical').innerText = data.summary.critical_alerts;
+      document.getElementById('statDisputes').innerText = `₹${data.summary.dispute_value.toLocaleString('en-IN')}`;
+      document.getElementById('statDisputeCount').innerText = `${data.summary.active_disputes} claims filed`;
+
+      const tbody = document.getElementById('inventoryTable');
+      if (data.inventory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">No active positions for your company. Link your seller ID or add stores manually.</td></tr>`;
+      } else {
+        tbody.innerHTML = data.inventory.map(row => {
+          const isCritical = row.hours_to_delist <= row.lead_time_hours;
+          const statusBadge = isCritical 
+            ? `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded text-[10px] font-bold">DELIST THREAT</span>`
+            : `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded text-[10px] font-bold">HEALTHY</span>`;
+
+          return `
+            <tr class="hover:bg-slate-800/40">
+              <td class="p-3 font-semibold text-white">${row.sku_name} <span class="text-slate-500">(${row.sku_code})</span></td>
+              <td class="p-3 text-slate-300"><span class="font-bold text-amber-400">${row.platform}</span> — ${row.cluster_name}</td>
+              <td class="p-3 font-mono font-bold">${row.current_stock}</td>
+              <td class="p-3 font-mono text-slate-400">${row.hourly_burn_rate}/hr</td>
+              <td class="p-3 font-mono font-bold ${isCritical ? 'text-rose-400' : 'text-slate-200'}">${row.hours_to_delist} hrs</td>
+              <td class="p-3">${statusBadge}</td>
+              <td class="p-3 text-right">
+                <button onclick="openSTNModal(${row.store_id}, ${row.sku_id}, '${row.cluster_name} - ${row.sku_name}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[11px] font-semibold transition">
+                  Dispatch STN
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      const disputeContainer = document.getElementById('disputeLedger');
+      if (data.disputes.length === 0) {
+        disputeContainer.innerHTML = `<div class="text-slate-500 text-xs py-5 col-span-3 text-center border border-dashed border-slate-800 rounded-xl">No disputes recorded for your account.</div>`;
+      } else {
+        disputeContainer.innerHTML = data.disputes.map(d => `
+          <div class="bg-slate-950/70 border border-slate-800 p-3 rounded-xl flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start">
+                <span class="text-rose-400 font-semibold text-[11px]">[${d.po_number}] ${d.platform} - ${d.cluster_name}</span>
+                <span class="text-amber-400 font-bold text-[11px]">₹${d.claim_value.toLocaleString('en-IN')}</span>
+              </div>
+              <p class="text-slate-200 font-medium text-xs mt-1">${d.sku_name}</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Rejected: ${d.rejected_qty} units • ${d.rejection_reason}</p>
+            </div>
+            <div class="mt-2 pt-2 border-t border-slate-800/80 flex justify-between items-center text-[10px] text-slate-500">
+              <span>${new Date(d.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span class="text-rose-400 font-bold">DEBIT CLAIM ACTIVE</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      lucide.createIcons();
+    }
+
+    async function handleCreateStore(e) {
+      e.preventDefault();
+      await fetch('/api/stores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: document.getElementById('storePlatform').value,
+          cluster_name: document.getElementById('storeCluster').value,
+          pincode: document.getElementById('storePincode').value,
+          lead_time_hours: parseFloat(document.getElementById('storeLeadTime').value)
+        })
+      });
+      toggleModal('modalStore');
+      await loadMetadata();
+      await refreshDashboard();
+    }
+
+    async function handleCreateSku(e) {
+      e.preventDefault();
+      await fetch('/api/skus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku_code: document.getElementById('skuCode').value,
+          name: document.getElementById('skuName').value,
+          category: document.getElementById('skuCategory').value,
+          unit_price: parseFloat(document.getElementById('skuPrice').value)
+        })
+      });
+      toggleModal('modalSku');
+      await loadMetadata();
+      await refreshDashboard();
+    }
+
+    async function handleSetInventory(e) {
+      e.preventDefault();
+      await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: parseInt(document.getElementById('invStoreSelect').value),
+          sku_id: parseInt(document.getElementById('invSkuSelect').value),
+          current_stock: parseInt(document.getElementById('invStock').value),
+          hourly_burn_rate: parseFloat(document.getElementById('invBurn').value)
+        })
+      });
+      toggleModal('modalInventory');
+      await refreshDashboard();
+    }
+
+    async function handleInwarding(e) {
+      e.preventDefault();
+      const dispatched = parseInt(document.getElementById('inwDispatched').value);
+      const received = parseInt(document.getElementById('inwReceived').value);
+
+      const res = await fetch('/api/inwarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          po_number: document.getElementById('inwPO').value,
+          store_id: parseInt(document.getElementById('inwStoreSelect').value),
+          sku_id: parseInt(document.getElementById('inwSkuSelect').value),
+          dispatched_qty: dispatched,
+          received_qty: received,
+          rejection_reason: document.getElementById('inwReason').value
+        })
+      });
+
+      const data = await res.json();
+      alert(data.status === 'DISPUTED' ? `Dispute recorded! Auto-calculated debit claim for ${data.rejected_qty} units.` : 'Full PO Inwarded successfully!');
+      toggleModal('modalInward');
+      await refreshDashboard();
+    }
+
+    function openSTNModal(storeId, skuId, label) {
+      document.getElementById('stnStoreId').value = storeId;
+      document.getElementById('stnSkuId').value = skuId;
+      document.getElementById('stnDestination').value = label;
+      toggleModal('modalSTN');
+    }
+
+    async function handleCreateSTN(e) {
+      e.preventDefault();
+      const res = await fetch('/api/stn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_hub: document.getElementById('stnSource').value,
+          target_store_id: parseInt(document.getElementById('stnStoreId').value),
+          sku_id: parseInt(document.getElementById('stnSkuId').value),
+          units: parseInt(document.getElementById('stnUnits').value),
+          courier_mode: document.getElementById('stnCourier').value
+        })
+      });
+      const data = await res.json();
+      alert(`Created and queued: ${data.stn_number}`);
+      toggleModal('modalSTN');
+    }
+
+    async function handleCSVUpload(input) {
+      if (!input.files || input.files.length === 0) return;
+      const formData = new FormData();
+      formData.append('file', input.files[0]);
+
+      const res = await fetch('/api/upload-csv', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      alert(data.message || 'CSV sync completed');
+      input.value = '';
+      await refreshDashboard();
+    }
+
+    window.onload = async () => {
+      await checkAuth();
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>
